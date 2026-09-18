@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>每日健康记录</title>
+<style>
+  :root{
+    --bg:#f4f7f5; --card:#ffffff; --fg:#14201a; --muted:#6b7c74;
+    --line:#d9e4de; --accent:#0f8a5f; --accent-soft:#e7f7f0;
+    --warn:#c98512; --danger:#c44536; --radius:16px; --shadow:0 8px 24px rgba(20,32,26,.06);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{
+    margin:0; padding:18px 14px 128px; background:
+      radial-gradient(circle at top left, rgba(15,138,95,.08), transparent 28%),
+      linear-gradient(180deg, #f7faf8 0%, var(--bg) 100%);
+    color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+    font-size:15px; line-height:1.55;
+  }
+  .wrap{max-width:860px; margin:0 auto}
+  h1{font-size:24px; margin:0 0 4px; letter-spacing:-.02em}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:18px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px; margin-bottom:14px; box-shadow:var(--shadow);
+  }
+  .card h2{
+    font-size:14px; margin:0 0 14px; font-weight:700; color:var(--fg);
+    display:flex; align-items:center; gap:8px;
+  }
+  .card h2 .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); flex:none}
+  .row{display:flex; gap:10px; flex-wrap:wrap}
+  .field{flex:1 1 140px; min-width:0}
+  label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
+  input[type=text],input[type=number],input[type=time],select,textarea{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:12px;
+    font-size:15px; font-family:inherit; background:#fff; color:var(--fg);
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  textarea{resize:vertical; min-height:72px}
+  .seg,.chips{display:flex; gap:8px; flex-wrap:wrap}
+  .seg button,.chips button,.ghost,.add,.pill{
+    padding:9px 13px; border:1px solid var(--line); background:#fff; border-radius:999px;
+    font-size:13px; font-family:inherit; cursor:pointer; color:var(--muted);
+  }
+  .seg button.on,.chips button.on,.pill.on{
+    background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;
+  }
+  .add,.ghost{border-radius:12px; color:var(--fg)}
+  .add{width:100%; border-style:dashed; margin-top:10px}
+  .upload{
+    margin-top:12px; border:1px dashed #c7d7cf; border-radius:14px; padding:12px; background:#fbfefc;
+  }
+  .upload .title{font-size:13px; font-weight:600; margin-bottom:8px}
+  .thumbs{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+  .thumb{
+    width:88px; position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#fff;
+  }
+  .thumb img{display:block; width:88px; height:88px; object-fit:cover}
+  .thumb button{
+    position:absolute; top:4px; right:4px; width:24px; height:24px; border:none; border-radius:50%;
+    background:rgba(0,0,0,.55); color:#fff; cursor:pointer;
+  }
+  .hint{font-size:12px; color:var(--muted); margin-top:8px}
+  .matrix-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:10px}
+  table.matrix{
+    width:100%; min-width:620px; border-collapse:separate; border-spacing:0;
+    background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  }
+  table.matrix th,table.matrix td{
+    border-bottom:1px solid var(--line); border-right:1px solid var(--line);
+    padding:8px; vertical-align:middle; text-align:left;
+  }
+  table.matrix th:last-child,table.matrix td:last-child{border-right:none}
+  table.matrix tr:last-child td{border-bottom:none}
+  table.matrix th{background:#f3f8f5; font-size:12px; color:var(--muted); font-weight:600}
+  table.matrix input{
+    width:100%; min-width:72px; padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:14px;
+  }
+  table.matrix .name-cell{min-width:130px}
+  table.matrix .ops{white-space:nowrap}
+  .ops button{
+    border:none; background:#f3f8f5; color:var(--muted); border-radius:8px; padding:6px 8px; cursor:pointer;
+  }
+  .meal-item{
+    border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:10px; background:#fcfefd;
+  }
+  footer{
+    position:fixed; left:0; right:0; bottom:0; padding:12px 14px 18px;
+    background:linear-gradient(to top, rgba(244,247,245,.98) 55%, rgba(244,247,245,0));
+  }
+  footer .bar{max-width:860px; margin:0 auto; display:flex; gap:10px}
+  .btn{
+    flex:1; padding:14px; border-radius:14px; border:none; font-size:16px; font-weight:700;
+    font-family:inherit; cursor:pointer;
+  }
+  .btn.primary{background:var(--accent); color:#fff; box-shadow:0 8px 20px rgba(15,138,95,.22)}
+  .btn.ghost{flex:0 0 auto; padding:14px 18px; background:#fff; border:1px solid var(--line); color:var(--muted)}
+  .toast{
+    position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
+    background:#14201a; color:#fff; padding:10px 16px; border-radius:10px; font-size:14px;
+    opacity:0; pointer-events:none; transition:opacity .25s; z-index:99; max-width:88vw; text-align:center;
+  }
+  .toast.show{opacity:1}
+  .record-card{display:none; margin:0 auto 16px; max-width:560px; background:#143d30; color:#f7fff9; border-radius:22px; padding:22px; box-shadow:0 14px 35px rgba(12,48,35,.22)}
+  .record-card.show{display:block}
+  .record-card .card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+  .record-card h3{font-size:21px;margin:0;letter-spacing:-.03em}.record-card .card-date{font-size:13px;color:#b4d7c6}
+  .record-card .card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.record-card .card-item{background:rgba(255,255,255,.10);padding:10px 12px;border-radius:12px;font-size:13px}.record-card .card-item b{display:block;font-size:11px;color:#b4d7c6;margin-bottom:3px;font-weight:500}
+  .record-card .card-block{border-top:1px solid rgba(255,255,255,.17);margin-top:14px;padding-top:13px;font-size:13px;line-height:1.65}.record-card .card-block b{color:#b4d7c6;font-size:11px;font-weight:500}.record-card .card-empty{color:#b4d7c6}
+  .card-actions{display:none;gap:10px;margin:-4px 0 16px}.card-actions.show{display:flex}.card-actions button{flex:1}
+  .visually-hidden{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  @media (max-width:640px){
+    body{padding:14px 12px 132px}
+    h1{font-size:22px}
+    table.matrix{min-width:560px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>每日健康记录</h1>
+  <div class="sub">睡眠 / 骑行 / 训练都可附图；训练用矩阵表边练边记；提交后小克落账并判断</div>
+
+  <div class="card">
+    <h2><span class="dot"></span>日期</h2>
+    <div class="row">
+      <div class="field">
+        <label for="date">记录日期</label>
+        <input id="date" type="text" placeholder="YYYY-MM-DD">
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="add" type="button" onclick="setToday()">今天</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>身体数据</h2>
+    <div class="row">
+      <div class="field">
+        <label for="weight">体重（斤，可填多个用逗号分隔）</label>
+        <input id="weight" type="text" placeholder="如 168.2 或 168.2,167.8">
+      </div>
+      <div class="field">
+        <label for="waist">腰围（cm，周一测）</label>
+        <input id="waist" type="number" step="0.5" placeholder="如 102">
+      </div>
+    </div>
+    <div class="hint">体重填「斤」即可，小克自动换算 kg 落账</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>睡眠</h2>
+    <div class="row">
+      <div class="field">
+        <label for="bedtime">入睡</label>
+        <input id="bedtime" type="time">
+      </div>
+      <div class="field">
+        <label for="waketime">起床</label>
+        <input id="waketime" type="time">
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <label>睡眠质量</label>
+      <div class="seg" id="sleepQuality">
+        <button type="button" data-v="好">好</button>
+        <button type="button" data-v="一般">一般</button>
+        <button type="button" data-v="差">差</button>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <label for="sleepNote">备注</label>
+      <input id="sleepNote" type="text" placeholder="夜醒、打鼾、做梦等，可留空">
+    </div>
+    <div class="upload">
+      <div class="title">上传睡眠截图</div>
+      <input class="visually-hidden" id="sleepImages" type="file" accept="image/*" multiple>
+      <button class="ghost" type="button" onclick="Q('sleepImages').click()">选择图片</button>
+      <div class="thumbs" id="sleepThumbs"></div>
+      <div class="hint">可直接传手表睡眠数据图，小克会识别时长 / 深睡 / 评分</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>骑行 / 运动</h2>
+    <div class="row">
+      <div class="field">
+        <label for="bikeAM">早骑行（km）</label>
+        <input id="bikeAM" type="number" step="0.5" placeholder="12">
+      </div>
+      <div class="field">
+        <label for="bikePM">晚骑行（km）</label>
+        <input id="bikePM" type="number" step="0.5" placeholder="12">
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <label>通勤方式</label>
+      <div class="seg" id="commuteMode">
+        <button type="button" data-v="骑行">骑行</button>
+        <button type="button" data-v="地铁">地铁</button>
+        <button type="button" data-v="步行">步行</button>
+        <button type="button" data-v="打车/网约车">打车/网约车</button>
+        <button type="button" data-v="居家">居家</button>
+        <button type="button" data-v="其他">其他</button>
+      </div>
+    </div>
+    <div class="upload">
+      <div class="title">上传骑行 / 运动截图</div>
+      <input class="visually-hidden" id="activityImages" type="file" accept="image/*" multiple>
+      <button class="ghost" type="button" onclick="Q('activityImages').click()">选择图片</button>
+      <div class="thumbs" id="activityThumbs"></div>
+      <div class="hint">手表骑行页、运动总结页、心率图都可以传</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>训练</h2>
+    <div>
+      <label>今天练了什么</label>
+      <div class="seg" id="exType">
+        <button type="button" data-v="gym">健身</button>
+        <button type="button" data-v="swim">游泳</button>
+        <button type="button" data-v="cardio">有氧</button>
+        <button type="button" data-v="none">没练</button>
+      </div>
+    </div>
+
+    <div id="gymBox" style="display:none; margin-top:14px">
+      <div class="row">
+        <div class="field">
+          <label for="exDur">时长（分钟）</label>
+          <input id="exDur" type="number" placeholder="如 40">
+        </div>
+        <div class="field">
+          <label for="exRpe">整体发力感 RPE (1-10)</label>
+          <input id="exRpe" type="number" min="1" max="10" placeholder="如 7">
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label>预设模板</label>
+        <div class="chips" id="planChips">
+          <button type="button" class="pill" data-plan="A">力量A · 推+核心</button>
+          <button type="button" class="pill" data-plan="B">力量B · 拉+核心</button>
+          <button type="button" class="pill" data-plan="clear">清空动作</button>
+        </div>
+        <div class="hint">模板只预填动作名；重量×次数按你当天实际填。后面有新动作再告诉小克加进预设。</div>
+      </div>
+
+      <div class="matrix-wrap">
+        <table class="matrix" aria-label="训练矩阵">
+          <thead>
+            <tr>
+              <th class="name-cell">动作</th>
+              <th>第1组</th>
+              <th>第2组</th>
+              <th>第3组</th>
+              <th>第4组</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
+      </div>
+      <button class="add" type="button" onclick="addMatrixRow()">+ 加一个动作</button>
+
+      <div style="margin-top:14px">
+        <label>练后感受</label>
+        <div class="seg" id="exFeel">
+          <button type="button" data-v="轻松">轻松</button>
+          <button type="button" data-v="刚好">刚好</button>
+          <button type="button" data-v="偏累">偏累</button>
+          <button type="button" data-v="很累">很累</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <label for="exNote">训练备注</label>
+      <input id="exNote" type="text" placeholder="某个动作不适、缩短组数等，可留空">
+    </div>
+    <div class="upload">
+      <div class="title">上传训练截图（可选）</div>
+      <input class="visually-hidden" id="trainingImages" type="file" accept="image/*" multiple>
+      <button class="ghost" type="button" onclick="Q('trainingImages').click()">选择图片</button>
+      <div class="thumbs" id="trainingThumbs"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>饮食</h2>
+    <div id="mealList"></div>
+    <button class="add" type="button" onclick="addMeal()">+ 加一餐</button>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>其他</h2>
+    <label for="notes">今天的整体状态 / 想说的话</label>
+    <textarea id="notes" placeholder="精神、情绪、饿感、任何想记的"></textarea>
+  </div>
+</div>
+
+<section id="recordCard" class="record-card" aria-live="polite"></section>
+<div id="cardActions" class="card-actions">
+  <button class="btn ghost" type="button" onclick="copyRecord()">复制记录文字</button>
+  <button class="btn primary" type="button" onclick="downloadCard()">保存记录卡</button>
+</div>
+
+<footer>
+  <div class="bar">
+    <button class="btn ghost" type="button" onclick="resetForm()">清空</button>
+    <button class="btn primary" id="submitBtn" type="button" onclick="submitForm()">生成记录并复制</button>
+  </div>
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const Q = id => document.getElementById(id);
+const PLANS = {
+  A: ['坐姿推胸', '高位下拉', '腹肌训练', '平板支撑'],
+  B: ['坐姿划船', '二头弯举', '腹肌训练', '平板支撑'],
+};
+const uploads = { sleep: [], activity: [], training: [] };
+
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+function initSeg(id, onPick){
+  const box = Q(id);
+  if(!box) return;
+  box.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-v]');
+    if(!btn) return;
+    [...box.querySelectorAll('button')].forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    if(onPick) onPick(btn.dataset.v);
+  });
+}
+function segVal(id){
+  const on = Q(id)?.querySelector('button.on');
+  return on ? on.dataset.v : null;
+}
+function setSeg(id, v){
+  const box = Q(id); if(!box) return;
+  [...box.querySelectorAll('button')].forEach(b => b.classList.toggle('on', b.dataset.v === v));
+}
+
+function renderThumbs(kind){
+  const box = Q(kind + 'Thumbs');
+  box.innerHTML = '';
+  uploads[kind].forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.innerHTML = `<img alt="${kind} 预览 ${idx+1}" src="${item.url}"><button type="button" aria-label="删除图片">×</button>`;
+    div.querySelector('button').onclick = () => {
+      URL.revokeObjectURL(item.url);
+      uploads[kind].splice(idx, 1);
+      renderThumbs(kind);
+    };
+    box.appendChild(div);
+  });
+}
+function bindUploader(inputId, kind){
+  Q(inputId).addEventListener('change', e => {
+    const files = [...e.target.files];
+    files.forEach(file => {
+      if(!file.type.startsWith('image/')) return;
+      uploads[kind].push({ file, url: URL.createObjectURL(file) });
+    });
+    e.target.value = '';
+    renderThumbs(kind);
+  });
+}
+
+function addMatrixRow(name=''){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="name-cell"><input class="m-name" type="text" value="${name}" placeholder="动作名"></td>
+    <td><input class="m-g" data-g="1" type="text" placeholder="20×12"></td>
+    <td><input class="m-g" data-g="2" type="text" placeholder="20×12"></td>
+    <td><input class="m-g" data-g="3" type="text" placeholder="20×12"></td>
+    <td><input class="m-g" data-g="4" type="text" placeholder="可选"></td>
+    <td class="ops"><button type="button" aria-label="删除动作">删</button></td>`;
+  tr.querySelector('.ops button').onclick = () => tr.remove();
+  Q('matrixBody').appendChild(tr);
+}
+function loadPlan(plan){
+  Q('matrixBody').innerHTML = '';
+  if(plan === 'clear') return;
+  (PLANS[plan] || []).forEach(name => addMatrixRow(name));
+}
+function parseGroup(text){
+  const raw = (text || '').trim();
+  if(!raw) return null;
+  let m = raw.match(/^(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+)$/i);
+  if(m) return { weight_kg: Number(m[1]), reps: Number(m[2]), raw };
+  m = raw.match(/^(\d+(?:\.\d+)?)\s*(s|秒)$/i);
+  if(m) return { seconds: Number(m[1]), raw };
+  m = raw.match(/^(\d+)$/);
+  if(m) return { reps: Number(m[1]), raw };
+  return { raw };
+}
+function collectMatrix(){
+  const rows = [];
+  Q('matrixBody').querySelectorAll('tr').forEach(tr => {
+    const name = tr.querySelector('.m-name').value.trim();
+    if(!name) return;
+    const groups = [...tr.querySelectorAll('.m-g')]
+      .map(inp => parseGroup(inp.value))
+      .filter(Boolean);
+    rows.push({ name, groups });
+  });
+  return rows;
+}
+
+function addMeal(time='', type=''){
+  const div = document.createElement('div');
+  div.className = 'meal-item';
+  const now = new Date();
+  const cur = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  div.innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong style="font-size:13px;color:var(--muted)">一餐</strong>
+      <button class="ghost" type="button" style="padding:6px 10px">删除</button>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:0 1 110px">
+        <label>时间</label>
+        <input class="m-time" type="time" value="${time || cur}">
+      </div>
+      <div class="field">
+        <label>餐次</label>
+        <select class="m-type">
+          <option value="早餐">早餐</option>
+          <option value="午餐">午餐</option>
+          <option value="晚餐">晚餐</option>
+          <option value="加餐">加餐</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <label>吃了什么</label>
+      <textarea class="m-content" placeholder="如 米饭半碗、清蒸鲈鱼、炒青菜"></textarea>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="field">
+        <label>蛋白份数</label>
+        <select class="m-protein"><option value="">未填</option><option>0</option><option>1</option><option>2</option><option>3</option></select>
+      </div>
+      <div class="field">
+        <label>蔬菜拳头数</label>
+        <select class="m-veggies"><option value="">未填</option><option>0</option><option>1</option><option>2</option><option>3</option></select>
+      </div>
+      <div class="field">
+        <label>油盐</label>
+        <select class="m-oily"><option value="">未填</option><option>低</option><option>中</option><option>高</option></select>
+      </div>
+    </div>`;
+  div.querySelector('button').onclick = () => div.remove();
+  if(type) div.querySelector('.m-type').value = type;
+  Q('mealList').appendChild(div);
+}
+
+function collect(){
+  const payload = { date: Q('date').value.trim() || today() };
+  const wRaw = Q('weight').value.trim();
+  if(wRaw){
+    const arr = wRaw.split(/[,，\s]+/).filter(Boolean).map(Number).filter(v => !isNaN(v))
+      .map(jin => Math.round(jin / 2 * 100) / 100);
+    if(arr.length) payload.weight_kg = arr;
+  }
+  if(Q('waist').value.trim()) payload.waist_cm = Number(Q('waist').value);
+
+  const sleep = {};
+  if(Q('bedtime').value) sleep.bedtime = Q('bedtime').value;
+  if(Q('waketime').value) sleep.waketime = Q('waketime').value;
+  if(segVal('sleepQuality')) sleep.quality = segVal('sleepQuality');
+  if(Q('sleepNote').value.trim()) sleep.note = Q('sleepNote').value.trim();
+  if(Object.keys(sleep).length) payload.sleep = sleep;
+
+  const commute = {};
+  if(Q('bikeAM').value) commute.morning_bike_km = Number(Q('bikeAM').value);
+  if(Q('bikePM').value) commute.evening_bike_km = Number(Q('bikePM').value);
+  if(segVal('commuteMode')) commute.mode_note = segVal('commuteMode');
+  if(Object.keys(commute).length) payload.commute = commute;
+
+  const ex = {};
+  const t = segVal('exType');
+  if(t && t !== 'none'){
+    ex.gym = t === 'gym';
+    ex.swim = t === 'swim';
+    if(t === 'cardio') ex.other = '有氧';
+  } else if(t === 'none'){
+    ex.gym = false; ex.swim = false;
+  }
+  if(Q('exDur').value) ex.duration_min = Number(Q('exDur').value);
+  if(Q('exRpe').value) ex.rpe = Number(Q('exRpe').value);
+  if(segVal('exFeel')) ex.feel = segVal('exFeel');
+  if(Q('exNote').value.trim()) ex.note = Q('exNote').value.trim();
+  const detail = collectMatrix();
+  if(detail.length) ex.detail = detail;
+  if(Object.keys(ex).length) payload.exercise = ex;
+
+  const meals = [];
+  Q('mealList').querySelectorAll('.meal-item').forEach(it => {
+    const content = it.querySelector('.m-content').value.trim();
+    const m = {
+      time: it.querySelector('.m-time').value,
+      type: it.querySelector('.m-type').value,
+      content
+    };
+    const p = it.querySelector('.m-protein').value;
+    const v = it.querySelector('.m-veggies').value;
+    const o = it.querySelector('.m-oily').value;
+    if(p) m.protein_servings = Number(p);
+    if(v) m.veggies_fist = Number(v);
+    if(o) m.oily_salty = o;
+    if(content || p || v || o) meals.push(m);
+  });
+  if(meals.length) payload.meals = meals;
+  if(Q('notes').value.trim()) payload.notes = [Q('notes').value.trim()];
+  return payload;
+}
+
+function toast(msg, ms=2800){
+  const t = Q('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function escapeHtml(s){ return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function formatRecord(payload){
+  const lines = [`【健康记录｜${payload.date}】`];
+  if(payload.weight_kg?.length) lines.push(`体重：${payload.weight_kg.map(x => (x*2).toFixed(1).replace(/\.0$/,'')+'斤').join(' / ')}`);
+  const s = payload.sleep || {};
+  if(Object.keys(s).length) lines.push(`睡眠：${[s.bedtime && s.waketime ? s.bedtime+'–'+s.waketime : '',s.quality,s.note].filter(Boolean).join('｜')}`);
+  const c = payload.commute || {};
+  if(Object.keys(c).length) lines.push(`通勤：${[c.mode_note,c.morning_bike_km!=null?'早骑'+c.morning_bike_km+'km':'',c.evening_bike_km!=null?'晚骑'+c.evening_bike_km+'km':''].filter(Boolean).join('｜')}`);
+  const ex = payload.exercise || {};
+  if(Object.keys(ex).length){
+    const type = ex.gym ? '健身' : ex.swim ? '游泳' : ex.other || (ex.gym===false && ex.swim===false ? '未训练' : '运动');
+    lines.push(`训练：${[type,ex.duration_min ? ex.duration_min+'分钟':'',ex.rpe ? 'RPE '+ex.rpe:'',ex.feel].filter(Boolean).join('｜')}`);
+    (ex.detail||[]).forEach(row => { const g=(row.groups||[]).map(x=>x.raw).filter(Boolean).join(' / '); if(row.name) lines.push(`- ${row.name}${g ? '：'+g : ''}`); });
+    if(ex.note) lines.push(`训练备注：${ex.note}`);
+  }
+  if(payload.meals?.length){ lines.push('饮食：'); payload.meals.forEach(m => lines.push(`- ${m.type}${m.time?'（'+m.time+'）':''}：${m.content || '未填写'}${m.oily_salty?'｜油盐'+m.oily_salty:''}`)); }
+  if(payload.notes?.[0]) lines.push(`备注：${payload.notes[0]}`);
+  return lines.join('\n');
+}
+function renderRecordCard(payload, text){
+  const card=Q('recordCard'); const s=payload.sleep||{}, c=payload.commute||{}, ex=payload.exercise||{};
+  const type=ex.gym?'健身':ex.swim?'游泳':ex.other||(ex.gym===false&&ex.swim===false?'未训练':'未记录');
+  const items=[['体重',payload.weight_kg?.length?payload.weight_kg.map(x=>(x*2).toFixed(1).replace(/\.0$/,'')+'斤').join(' / '):'未记录'],['睡眠',s.bedtime&&s.waketime?s.bedtime+'–'+s.waketime:(s.quality||'未记录')],['通勤',c.mode_note||'未记录'],['训练',[type,ex.duration_min&&ex.duration_min+'分钟'].filter(Boolean).join('｜')]];
+  const meals=(payload.meals||[]).map(m=>`<div>· ${escapeHtml(m.type)}：${escapeHtml(m.content||'未填写')}</div>`).join('') || '<span class="card-empty">未记录</span>';
+  const train=(ex.detail||[]).map(r=>`<div>· ${escapeHtml(r.name)}${r.groups?.length?'：'+escapeHtml(r.groups.map(g=>g.raw).filter(Boolean).join(' / ')):''}</div>`).join('') || '<span class="card-empty">未记录</span>';
+  card.innerHTML=`<div class="card-head"><div><h3>今日健康记录</h3><div class="card-date">${escapeHtml(payload.date)} · 小克健康台账</div></div><div>✦</div></div><div class="card-grid">${items.map(([k,v])=>`<div class="card-item"><b>${k}</b>${escapeHtml(v)}</div>`).join('')}</div><div class="card-block"><b>训练明细</b>${train}</div><div class="card-block"><b>饮食</b>${meals}</div>${payload.notes?.[0]?`<div class="card-block"><b>备注</b><div>${escapeHtml(payload.notes[0])}</div></div>`:''}`;
+  card.dataset.text=text; card.classList.add('show'); Q('cardActions').classList.add('show'); card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function copyRecord(){ const text=Q('recordCard').dataset.text||''; try{ await navigator.clipboard.writeText(text); toast('记录文字已复制，打开微信直接粘贴'); }catch(e){ toast('复制失败，请长按选择记录卡内容'); } }
+function downloadCard(){ const text=Q('recordCard').dataset.text||''; const blob=new Blob([text],{type:'text/plain;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`健康记录-${Q('date').value||today()}.txt`; a.click(); URL.revokeObjectURL(a.href); toast('记录文本已保存'); }
+function saveDraft(){ try{ localStorage.setItem('health-record-draft-v1',JSON.stringify(collect())); }catch(e){} }
+function restoreDraft(){ try{ const p=JSON.parse(localStorage.getItem('health-record-draft-v1')||'null'); if(p?.date) Q('date').value=p.date; }catch(e){} }
+async function submitForm(){
+  const payload = collect();
+  saveDraft();
+  const text=formatRecord(payload);
+  renderRecordCard(payload,text);
+  try{ await navigator.clipboard.writeText(text); toast('记录已生成并复制：去微信粘贴给小克'); }catch(e){ toast('记录已生成：点“复制记录文字”后发微信'); }
+}
+
+function setToday(){ Q('date').value = today(); }
+function resetForm(){
+  if(!confirm('确定清空所有已填内容？')) return;
+  ['weight','waist','bedtime','waketime','sleepNote','bikeAM','bikePM','exDur','exRpe','exNote','notes']
+    .forEach(id => Q(id).value = '');
+  ['sleepQuality','commuteMode','exType','exFeel'].forEach(id => {
+    Q(id).querySelectorAll('button').forEach(b => b.classList.remove('on'));
+  });
+  Object.keys(uploads).forEach(k => {
+    uploads[k].forEach(x => URL.revokeObjectURL(x.url));
+    uploads[k] = [];
+    renderThumbs(k);
+  });
+  Q('matrixBody').innerHTML = '';
+  Q('mealList').innerHTML = '';
+  Q('gymBox').style.display = 'none';
+  setToday();
+  addMeal('08:00','早餐');
+  addMeal('12:00','午餐');
+  addMeal('19:00','晚餐');
+}
+
+initSeg('sleepQuality');
+initSeg('commuteMode');
+initSeg('exFeel');
+initSeg('exType', v => {
+  Q('gymBox').style.display = (v === 'gym' || v === 'cardio') ? 'block' : 'none';
+  if((v === 'gym' || v === 'cardio') && !Q('matrixBody').children.length) addMatrixRow();
+});
+Q('planChips').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-plan]');
+  if(!btn) return;
+  loadPlan(btn.dataset.plan);
+});
+bindUploader('sleepImages', 'sleep');
+bindUploader('activityImages', 'activity');
+bindUploader('trainingImages', 'training');
+
+setToday();
+restoreDraft();
+addMeal('08:00','早餐');
+addMeal('12:00','午餐');
+addMeal('19:00','晚餐');
+</script>
+</body>
+</html>
