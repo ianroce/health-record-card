@@ -3,229 +3,349 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f8a5f">
 <title>每日健康记录</title>
 <style>
   :root{
-    --bg:#f4f7f5; --card:#ffffff; --fg:#14201a; --muted:#6b7c74;
-    --line:#d9e4de; --accent:#0f8a5f; --accent-soft:#e7f7f0;
-    --warn:#c98512; --danger:#c44536; --radius:16px; --shadow:0 8px 24px rgba(20,32,26,.06);
+    --bg:#f2f6f4; --card:#ffffff; --fg:#152420; --muted:#66786f;
+    --line:#dce8e1; --accent:#0f8a5f; --accent-deep:#0b6b4a; --accent-soft:#e6f6ef;
+    --warn:#b97a0e; --warn-soft:#fdf3e0; --danger:#c44536;
+    --radius:18px; --shadow:0 6px 22px rgba(16,42,32,.07);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth}
   body{
-    margin:0; padding:18px 14px 128px; background:
-      radial-gradient(circle at top left, rgba(15,138,95,.08), transparent 28%),
-      linear-gradient(180deg, #f7faf8 0%, var(--bg) 100%);
+    margin:0; padding:0 0 150px; background:
+      radial-gradient(circle at 85% -5%, rgba(15,138,95,.10), transparent 32%),
+      radial-gradient(circle at 0% 30%, rgba(15,138,95,.05), transparent 25%),
+      linear-gradient(180deg, #f8fbf9 0%, var(--bg) 100%);
     color:var(--fg);
     font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
-    font-size:15px; line-height:1.55;
+    font-size:16px; line-height:1.6;
   }
-  .wrap{max-width:860px; margin:0 auto}
-  h1{font-size:24px; margin:0 0 4px; letter-spacing:-.02em}
-  .sub{color:var(--muted); font-size:13px; margin-bottom:18px}
+  .wrap{max-width:680px; margin:0 auto; padding:0 14px}
+
+  /* ── 顶部提醒条 ── */
+  #todoBar{
+    display:none; gap:8px; align-items:flex-start;
+    background:var(--warn-soft); border:1px solid #f0dcb4; color:#8a5c08;
+    border-radius:14px; padding:11px 14px; margin:14px 0 4px; font-size:13.5px; line-height:1.55;
+  }
+  #todoBar.show{display:flex}
+  #todoBar .ico{flex:none}
+
+  header.app{padding:22px 0 6px}
+  h1{font-size:26px; margin:0 0 6px; letter-spacing:-.02em}
+  .sub{color:var(--muted); font-size:13.5px; margin-bottom:10px}
+  .progress{display:flex; align-items:center; gap:10px; margin-bottom:16px}
+  .progress .track{flex:1; height:6px; border-radius:99px; background:#dfeae4; overflow:hidden}
+  .progress .fill{height:100%; width:0%; border-radius:99px; background:linear-gradient(90deg,var(--accent),#2db984); transition:width .35s ease}
+  .progress .pct{font-size:12.5px; color:var(--muted); min-width:74px; text-align:right}
+
+  /* ── 手风琴卡片 ── */
   .card{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-    padding:16px; margin-bottom:14px; box-shadow:var(--shadow);
+    margin-bottom:12px; box-shadow:var(--shadow); overflow:hidden;
   }
-  .card h2{
-    font-size:14px; margin:0 0 14px; font-weight:700; color:var(--fg);
-    display:flex; align-items:center; gap:8px;
+  .card-head{
+    display:flex; align-items:center; gap:12px; width:100%;
+    padding:16px; border:none; background:transparent; cursor:pointer;
+    font-family:inherit; font-size:16px; font-weight:700; color:var(--fg); text-align:left;
   }
-  .card h2 .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); flex:none}
+  .card-head .num{
+    flex:none; width:30px; height:30px; border-radius:10px; background:var(--accent-soft);
+    color:var(--accent-deep); font-size:14px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .card-head .badge{
+    flex:none; margin-left:auto; font-size:12px; font-weight:600; color:var(--muted);
+    background:#f1f6f3; border-radius:99px; padding:3px 10px; max-width:46%;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .card-head .badge.done{color:var(--accent-deep); background:var(--accent-soft)}
+  .card-head .arrow{flex:none; color:var(--muted); transition:transform .25s ease; font-size:13px}
+  .card.open .card-head .arrow{transform:rotate(90deg)}
+  .card-body{display:none; padding:2px 16px 18px; border-top:1px solid #eef4f0}
+  .card.open .card-body{display:block}
+
   .row{display:flex; gap:10px; flex-wrap:wrap}
-  .field{flex:1 1 140px; min-width:0}
-  label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
+  .field{flex:1 1 150px; min-width:0}
+  label{display:block; font-size:13px; color:var(--muted); margin:12px 0 6px; font-weight:500}
+  label:first-child{margin-top:4px}
   input[type=text],input[type=number],input[type=time],select,textarea{
-    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:12px;
-    font-size:15px; font-family:inherit; background:#fff; color:var(--fg);
+    width:100%; min-height:46px; padding:11px 13px; border:1.5px solid var(--line); border-radius:13px;
+    font-size:16px; font-family:inherit; background:#fff; color:var(--fg);
   }
+  textarea{min-height:80px; line-height:1.55}
   input:focus,select:focus,textarea:focus{
     outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);
   }
-  textarea{resize:vertical; min-height:72px}
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+  .hint{font-size:12.5px; color:var(--muted); margin-top:8px}
+
   .seg,.chips{display:flex; gap:8px; flex-wrap:wrap}
-  .seg button,.chips button,.ghost,.add,.pill{
-    padding:9px 13px; border:1px solid var(--line); background:#fff; border-radius:999px;
-    font-size:13px; font-family:inherit; cursor:pointer; color:var(--muted);
+  .seg button,.chips button,.pill{
+    min-height:44px; padding:10px 16px; border:1.5px solid var(--line); background:#fff; border-radius:999px;
+    font-size:14.5px; font-family:inherit; cursor:pointer; color:var(--fg);
+    transition:all .15s ease;
   }
   .seg button.on,.chips button.on,.pill.on{
     background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;
+    box-shadow:0 4px 12px rgba(15,138,95,.28);
   }
-  .add,.ghost{border-radius:12px; color:var(--fg)}
-  .add{width:100%; border-style:dashed; margin-top:10px}
+
   .upload{
-    margin-top:12px; border:1px dashed #c7d7cf; border-radius:14px; padding:12px; background:#fbfefc;
+    margin-top:14px; border:1.5px dashed #c3d8cd; border-radius:15px; padding:13px; background:#fafdfb;
   }
-  .upload .title{font-size:13px; font-weight:600; margin-bottom:8px}
+  .upload .title{font-size:14px; font-weight:600; margin-bottom:9px}
+  .ghost{
+    min-height:44px; padding:10px 16px; border:1.5px solid var(--line); background:#fff; border-radius:12px;
+    font-size:14.5px; font-family:inherit; cursor:pointer; color:var(--fg);
+  }
   .thumbs{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
-  .thumb{
-    width:88px; position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#fff;
-  }
-  .thumb img{display:block; width:88px; height:88px; object-fit:cover}
+  .thumb{width:92px; position:relative; border-radius:13px; overflow:hidden; border:1px solid var(--line); background:#fff}
+  .thumb img{display:block; width:92px; height:92px; object-fit:cover}
   .thumb button{
-    position:absolute; top:4px; right:4px; width:24px; height:24px; border:none; border-radius:50%;
-    background:rgba(0,0,0,.55); color:#fff; cursor:pointer;
+    position:absolute; top:4px; right:4px; width:26px; height:26px; border:none; border-radius:50%;
+    background:rgba(0,0,0,.55); color:#fff; cursor:pointer; font-size:15px; line-height:1;
   }
-  .hint{font-size:12px; color:var(--muted); margin-top:8px}
-  .matrix-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:10px}
-  table.matrix{
-    width:100%; min-width:620px; border-collapse:separate; border-spacing:0;
-    background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden;
+
+  /* 训练矩阵 */
+  .matrix-hint{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); margin:10px 0 0}
+  .matrix-wrap{
+    overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:8px;
+    border:1px solid var(--line); border-radius:15px; background:#fff;
+    scrollbar-width:thin;
   }
+  table.matrix{width:100%; min-width:600px; border-collapse:separate; border-spacing:0}
   table.matrix th,table.matrix td{
-    border-bottom:1px solid var(--line); border-right:1px solid var(--line);
-    padding:8px; vertical-align:middle; text-align:left;
+    border-bottom:1px solid #eef4f0; border-right:1px solid #eef4f0;
+    padding:9px; vertical-align:middle; text-align:left;
   }
   table.matrix th:last-child,table.matrix td:last-child{border-right:none}
   table.matrix tr:last-child td{border-bottom:none}
-  table.matrix th{background:#f3f8f5; font-size:12px; color:var(--muted); font-weight:600}
+  table.matrix th{background:#f4f9f6; font-size:12.5px; color:var(--muted); font-weight:600; padding:10px 9px}
   table.matrix input{
-    width:100%; min-width:72px; padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:14px;
+    width:100%; min-width:80px; padding:10px 11px; border:1.5px solid var(--line); border-radius:11px; font-size:15px;
   }
-  table.matrix .name-cell{min-width:130px}
+  table.matrix .name-cell{min-width:132px}
   table.matrix .ops{white-space:nowrap}
   .ops button{
-    border:none; background:#f3f8f5; color:var(--muted); border-radius:8px; padding:6px 8px; cursor:pointer;
+    border:none; background:#f1f6f3; color:var(--danger); border-radius:9px; padding:9px 11px; cursor:pointer; font-size:14px;
   }
+  .add{
+    width:100%; min-height:46px; border:1.5px dashed #b9d4c6; background:#fff; border-radius:13px; margin-top:10px;
+    font-size:15px; font-family:inherit; color:var(--accent-deep); cursor:pointer; font-weight:600;
+  }
+
   .meal-item{
-    border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:10px; background:#fcfefd;
+    border:1px solid var(--line); border-radius:15px; padding:13px; margin-bottom:10px; background:#fcfefd;
   }
+  .meal-item .meal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:4px}
+  .meal-item .meal-head strong{font-size:13.5px; color:var(--muted); font-weight:600}
+  .meal-item .del{
+    border:none; background:#fdf0ee; color:var(--danger); border-radius:9px; min-height:36px; padding:6px 12px;
+    font-size:13px; cursor:pointer; font-family:inherit;
+  }
+
+  /* 快捷模式条 */
+  .quick-strip{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    background:linear-gradient(90deg, #effaf4, #f2fbf7); border:1px solid #cfe9db;
+    border-radius:15px; padding:12px 14px; margin-bottom:14px;
+  }
+  .quick-strip .t{font-size:13.5px; font-weight:600; color:var(--accent-deep)}
+  .quick-strip button{
+    min-height:38px; padding:7px 14px; border-radius:99px; border:1.5px solid var(--accent);
+    background:#fff; color:var(--accent-deep); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+
+  /* 底部操作栏 */
   footer{
-    position:fixed; left:0; right:0; bottom:0; padding:12px 14px 18px;
-    background:linear-gradient(to top, rgba(244,247,245,.98) 55%, rgba(244,247,245,0));
+    position:fixed; left:0; right:0; bottom:0; z-index:50;
+    padding:10px 14px calc(16px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(242,246,244,.99) 62%, rgba(242,246,244,0));
   }
-  footer .bar{max-width:860px; margin:0 auto; display:flex; gap:10px}
+  footer .bar{max-width:680px; margin:0 auto; display:flex; gap:10px; align-items:stretch}
   .btn{
-    flex:1; padding:14px; border-radius:14px; border:none; font-size:16px; font-weight:700;
-    font-family:inherit; cursor:pointer;
+    padding:15px 18px; border-radius:15px; border:none; font-size:16.5px; font-weight:700;
+    font-family:inherit; cursor:pointer; min-height:52px;
   }
-  .btn.primary{background:var(--accent); color:#fff; box-shadow:0 8px 20px rgba(15,138,95,.22)}
-  .btn.ghost{flex:0 0 auto; padding:14px 18px; background:#fff; border:1px solid var(--line); color:var(--muted)}
+  .btn.primary{
+    flex:1; background:linear-gradient(135deg, var(--accent), var(--accent-deep)); color:#fff;
+    box-shadow:0 8px 22px rgba(15,138,95,.32);
+  }
+  .btn.primary:active{transform:translateY(1px)}
+  .btn.icon{
+    flex:none; width:52px; background:#fff; border:1.5px solid var(--line); color:var(--muted);
+    font-size:19px; border-radius:15px; padding:0;
+  }
+
   .toast{
-    position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
-    background:#14201a; color:#fff; padding:10px 16px; border-radius:10px; font-size:14px;
+    position:fixed; left:50%; bottom:110px; transform:translateX(-50%);
+    background:#152420; color:#fff; padding:12px 18px; border-radius:12px; font-size:14.5px;
     opacity:0; pointer-events:none; transition:opacity .25s; z-index:99; max-width:88vw; text-align:center;
+    box-shadow:0 10px 28px rgba(0,0,0,.25);
   }
   .toast.show{opacity:1}
-  .record-card{display:none; margin:0 auto 16px; max-width:560px; background:#143d30; color:#f7fff9; border-radius:22px; padding:22px; box-shadow:0 14px 35px rgba(12,48,35,.22)}
-  .record-card.show{display:block}
-  .record-card .card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
-  .record-card h3{font-size:21px;margin:0;letter-spacing:-.03em}.record-card .card-date{font-size:13px;color:#b4d7c6}
-  .record-card .card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.record-card .card-item{background:rgba(255,255,255,.10);padding:10px 12px;border-radius:12px;font-size:13px}.record-card .card-item b{display:block;font-size:11px;color:#b4d7c6;margin-bottom:3px;font-weight:500}
-  .record-card .card-block{border-top:1px solid rgba(255,255,255,.17);margin-top:14px;padding-top:13px;font-size:13px;line-height:1.65}.record-card .card-block b{color:#b4d7c6;font-size:11px;font-weight:500}.record-card .card-empty{color:#b4d7c6}
-  .card-actions{display:none;gap:10px;margin:-4px 0 16px}.card-actions.show{display:flex}.card-actions button{flex:1}
-  .visually-hidden{
-    position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
-    clip:rect(0,0,0,0); white-space:nowrap; border:0;
+
+  /* 记录卡 */
+  .record-card{
+    display:none; margin:6px auto 16px; max-width:560px;
+    background:linear-gradient(150deg, #10402f, #0b2f22); color:#f7fff9;
+    border-radius:24px; padding:24px; box-shadow:0 16px 40px rgba(10,42,30,.30);
   }
+  .record-card.show{display:block; animation:pop .3s ease}
+  @keyframes pop{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+  .record-card .card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+  .record-card h3{font-size:22px;margin:0;letter-spacing:-.03em}
+  .record-card .card-date{font-size:13px;color:#a9d3bf;margin-top:2px}
+  .record-card .spark{font-size:20px}
+  .record-card .card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+  .record-card .card-item{background:rgba(255,255,255,.10);padding:11px 13px;border-radius:13px;font-size:13.5px}
+  .record-card .card-item b{display:block;font-size:11px;color:#a9d3bf;margin-bottom:3px;font-weight:500}
+  .record-card .card-block{border-top:1px solid rgba(255,255,255,.16);margin-top:14px;padding-top:13px;font-size:13.5px;line-height:1.7}
+  .record-card .card-block b{color:#a9d3bf;font-size:11px;font-weight:500}
+  .record-card .card-empty{color:#a9d3bf}
+  .card-actions{display:none;gap:10px;max-width:560px;margin:0 auto 16px}
+  .card-actions.show{display:flex}
+  .card-actions .btn{flex:1}
+  .card-actions .btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--fg);font-size:15px}
+
+  .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   @media (max-width:640px){
-    body{padding:14px 12px 132px}
-    h1{font-size:22px}
-    table.matrix{min-width:560px}
+    h1{font-size:23px}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>每日健康记录</h1>
-  <div class="sub">睡眠 / 骑行 / 训练都可附图；训练用矩阵表边练边记；提交后小克落账并判断</div>
 
-  <div class="card">
-    <h2><span class="dot"></span>日期</h2>
-    <div class="row">
-      <div class="field">
-        <label for="date">记录日期</label>
-        <input id="date" type="text" placeholder="YYYY-MM-DD">
-      </div>
-      <div class="field">
-        <label>&nbsp;</label>
-        <button class="add" type="button" onclick="setToday()">今天</button>
-      </div>
+  <header class="app">
+    <h1>每日健康记录</h1>
+    <div class="sub">填完点底部「生成记录」→ 去微信粘贴给小克，图片直接微信原图发</div>
+    <div class="progress">
+      <div class="track"><div class="fill" id="progFill"></div></div>
+      <div class="pct" id="progText">0% 已填</div>
     </div>
+  </header>
+
+  <div id="todoBar"><span class="ico">📝</span><span id="todoText"></span></div>
+
+  <div class="quick-strip">
+    <span class="t">⚡ 赶时间？</span>
+    <button type="button" onclick="quickDefault()">一键默认日</button>
+    <button type="button" onclick="loadLastWorkout()">套用上次训练</button>
   </div>
 
-  <div class="card">
-    <h2><span class="dot"></span>身体数据</h2>
-    <div class="row">
-      <div class="field">
-        <label for="weight">体重（斤，可填多个用逗号分隔）</label>
-        <input id="weight" type="text" placeholder="如 168.2 或 168.2,167.8">
+  <!-- 1 身体数据 -->
+  <section class="card open" id="card-body">
+    <button class="card-head" type="button" onclick="toggleCard('card-body')">
+      <span class="num">1</span>身体数据
+      <span class="badge" data-badge></span><span class="arrow">▶</span>
+    </button>
+    <div class="card-body">
+      <div class="row">
+        <div class="field">
+          <label for="weight">体重（斤，可多个用逗号分隔）</label>
+          <input id="weight" type="text" inputmode="decimal" placeholder="如 168.2 或 168.2,167.8" oninput="onInput()">
+        </div>
+        <div class="field">
+          <label for="waist">腰围（cm，周一测）</label>
+          <input id="waist" type="number" step="0.5" inputmode="decimal" placeholder="如 102" oninput="onInput()">
+        </div>
       </div>
-      <div class="field">
-        <label for="waist">腰围（cm，周一测）</label>
-        <input id="waist" type="number" step="0.5" placeholder="如 102">
+      <div class="row" style="margin-top:2px">
+        <div class="field">
+          <label for="date">记录日期</label>
+          <input id="date" type="text" placeholder="YYYY-MM-DD" oninput="onInput()">
+        </div>
+        <div class="field" style="flex:0 0 auto; align-self:flex-end">
+          <button class="ghost" type="button" onclick="setToday()">今天</button>
+        </div>
       </div>
+      <div class="hint">体重填「斤」即可，小克自动换算 kg 落账</div>
     </div>
-    <div class="hint">体重填「斤」即可，小克自动换算 kg 落账</div>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2><span class="dot"></span>睡眠</h2>
-    <div class="row">
-      <div class="field">
-        <label for="bedtime">入睡</label>
-        <input id="bedtime" type="time">
+  <!-- 2 睡眠 -->
+  <section class="card" id="card-sleep">
+    <button class="card-head" type="button" onclick="toggleCard('card-sleep')">
+      <span class="num">2</span>睡眠
+      <span class="badge" data-badge></span><span class="arrow">▶</span>
+    </button>
+    <div class="card-body">
+      <div class="row">
+        <div class="field">
+          <label for="bedtime">入睡</label>
+          <input id="bedtime" type="time" oninput="onInput()">
+        </div>
+        <div class="field">
+          <label for="waketime">起床</label>
+          <input id="waketime" type="time" oninput="onInput()">
+        </div>
       </div>
-      <div class="field">
-        <label for="waketime">起床</label>
-        <input id="waketime" type="time">
-      </div>
-    </div>
-    <div style="margin-top:12px">
       <label>睡眠质量</label>
       <div class="seg" id="sleepQuality">
         <button type="button" data-v="好">好</button>
         <button type="button" data-v="一般">一般</button>
         <button type="button" data-v="差">差</button>
       </div>
-    </div>
-    <div style="margin-top:12px">
       <label for="sleepNote">备注</label>
-      <input id="sleepNote" type="text" placeholder="夜醒、打鼾、做梦等，可留空">
+      <input id="sleepNote" type="text" placeholder="夜醒、打鼾、做梦等，可留空" oninput="onInput()">
+      <div class="upload">
+        <div class="title">📷 睡眠截图</div>
+        <input class="visually-hidden" id="sleepImages" type="file" accept="image/*" multiple>
+        <button class="ghost" type="button" onclick="Q('sleepImages').click()">选择图片</button>
+        <div class="thumbs" id="sleepThumbs"></div>
+        <div class="hint">可直接传手表睡眠数据图，小克会识别时长/深睡/评分</div>
+      </div>
     </div>
-    <div class="upload">
-      <div class="title">上传睡眠截图</div>
-      <input class="visually-hidden" id="sleepImages" type="file" accept="image/*" multiple>
-      <button class="ghost" type="button" onclick="Q('sleepImages').click()">选择图片</button>
-      <div class="thumbs" id="sleepThumbs"></div>
-      <div class="hint">可直接传手表睡眠数据图，小克会识别时长 / 深睡 / 评分</div>
-    </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2><span class="dot"></span>骑行 / 运动</h2>
-    <div class="row">
-      <div class="field">
-        <label for="bikeAM">早骑行（km）</label>
-        <input id="bikeAM" type="number" step="0.5" placeholder="12">
+  <!-- 3 骑行/运动 -->
+  <section class="card" id="card-commute">
+    <button class="card-head" type="button" onclick="toggleCard('card-commute')">
+      <span class="num">3</span>骑行 / 运动
+      <span class="badge" data-badge></span><span class="arrow">▶</span>
+    </button>
+    <div class="card-body">
+      <div class="row">
+        <div class="field">
+          <label for="bikeAM">早骑行（km）</label>
+          <input id="bikeAM" type="number" step="0.5" inputmode="decimal" placeholder="没骑留空" oninput="onInput()">
+        </div>
+        <div class="field">
+          <label for="bikePM">晚骑行（km）</label>
+          <input id="bikePM" type="number" step="0.5" inputmode="decimal" placeholder="没骑留空" oninput="onInput()">
+        </div>
       </div>
-      <div class="field">
-        <label for="bikePM">晚骑行（km）</label>
-        <input id="bikePM" type="number" step="0.5" placeholder="12">
-      </div>
-    </div>
-    <div style="margin-top:12px">
       <label>通勤方式</label>
       <div class="seg" id="commuteMode">
         <button type="button" data-v="骑行">骑行</button>
         <button type="button" data-v="地铁">地铁</button>
         <button type="button" data-v="步行">步行</button>
-        <button type="button" data-v="打车/网约车">打车/网约车</button>
+        <button type="button" data-v="打车/网约车">打车</button>
         <button type="button" data-v="居家">居家</button>
         <button type="button" data-v="其他">其他</button>
       </div>
+      <div class="upload">
+        <div class="title">📷 骑行 / 运动截图</div>
+        <input class="visually-hidden" id="activityImages" type="file" accept="image/*" multiple>
+        <button class="ghost" type="button" onclick="Q('activityImages').click()">选择图片</button>
+        <div class="thumbs" id="activityThumbs"></div>
+        <div class="hint">手表骑行页、运动总结页、心率图都可以传</div>
+      </div>
     </div>
-    <div class="upload">
-      <div class="title">上传骑行 / 运动截图</div>
-      <input class="visually-hidden" id="activityImages" type="file" accept="image/*" multiple>
-      <button class="ghost" type="button" onclick="Q('activityImages').click()">选择图片</button>
-      <div class="thumbs" id="activityThumbs"></div>
-      <div class="hint">手表骑行页、运动总结页、心率图都可以传</div>
-    </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2><span class="dot"></span>训练</h2>
-    <div>
+  <!-- 4 训练 -->
+  <section class="card" id="card-exercise">
+    <button class="card-head" type="button" onclick="toggleCard('card-exercise')">
+      <span class="num">4</span>训练
+      <span class="badge" data-badge></span><span class="arrow">▶</span>
+    </button>
+    <div class="card-body">
       <label>今天练了什么</label>
       <div class="seg" id="exType">
         <button type="button" data-v="gym">健身</button>
@@ -233,48 +353,38 @@
         <button type="button" data-v="cardio">有氧</button>
         <button type="button" data-v="none">没练</button>
       </div>
-    </div>
 
-    <div id="gymBox" style="display:none; margin-top:14px">
-      <div class="row">
-        <div class="field">
-          <label for="exDur">时长（分钟）</label>
-          <input id="exDur" type="number" placeholder="如 40">
+      <div id="gymBox" style="display:none; margin-top:14px">
+        <div class="row">
+          <div class="field">
+            <label for="exDur">时长（分钟）</label>
+            <input id="exDur" type="number" inputmode="numeric" placeholder="如 40" oninput="onInput()">
+          </div>
+          <div class="field">
+            <label for="exRpe">发力感 RPE（1-10）</label>
+            <input id="exRpe" type="number" min="1" max="10" inputmode="numeric" placeholder="如 7" oninput="onInput()">
+          </div>
         </div>
-        <div class="field">
-          <label for="exRpe">整体发力感 RPE (1-10)</label>
-          <input id="exRpe" type="number" min="1" max="10" placeholder="如 7">
-        </div>
-      </div>
 
-      <div style="margin-top:12px">
         <label>预设模板</label>
         <div class="chips" id="planChips">
           <button type="button" class="pill" data-plan="A">力量A · 推+核心</button>
           <button type="button" class="pill" data-plan="B">力量B · 拉+核心</button>
           <button type="button" class="pill" data-plan="clear">清空动作</button>
         </div>
-        <div class="hint">模板只预填动作名；重量×次数按你当天实际填。后面有新动作再告诉小克加进预设。</div>
-      </div>
+        <div class="hint">模板只预填动作名；重量×次数按当天实际填。「套用上次训练」会连重量一起带过来。</div>
 
-      <div class="matrix-wrap">
-        <table class="matrix" aria-label="训练矩阵">
-          <thead>
-            <tr>
-              <th class="name-cell">动作</th>
-              <th>第1组</th>
-              <th>第2组</th>
-              <th>第3组</th>
-              <th>第4组</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="matrixBody"></tbody>
-        </table>
-      </div>
-      <button class="add" type="button" onclick="addMatrixRow()">+ 加一个动作</button>
+        <div class="matrix-hint"><span>👈 左右滑动填各组</span></div>
+        <div class="matrix-wrap">
+          <table class="matrix" aria-label="训练矩阵">
+            <thead><tr>
+              <th class="name-cell">动作</th><th>第1组</th><th>第2组</th><th>第3组</th><th>第4组</th><th></th>
+            </tr></thead>
+            <tbody id="matrixBody"></tbody>
+          </table>
+        </div>
+        <button class="add" type="button" onclick="addMatrixRow()">+ 加一个动作</button>
 
-      <div style="margin-top:14px">
         <label>练后感受</label>
         <div class="seg" id="exFeel">
           <button type="button" data-v="轻松">轻松</button>
@@ -283,42 +393,52 @@
           <button type="button" data-v="很累">很累</button>
         </div>
       </div>
-    </div>
 
-    <div style="margin-top:14px">
       <label for="exNote">训练备注</label>
-      <input id="exNote" type="text" placeholder="某个动作不适、缩短组数等，可留空">
+      <input id="exNote" type="text" placeholder="某个动作不适、缩短组数等，可留空" oninput="onInput()">
+      <div class="upload">
+        <div class="title">📷 训练截图（可选）</div>
+        <input class="visually-hidden" id="trainingImages" type="file" accept="image/*" multiple>
+        <button class="ghost" type="button" onclick="Q('trainingImages').click()">选择图片</button>
+        <div class="thumbs" id="trainingThumbs"></div>
+      </div>
     </div>
-    <div class="upload">
-      <div class="title">上传训练截图（可选）</div>
-      <input class="visually-hidden" id="trainingImages" type="file" accept="image/*" multiple>
-      <button class="ghost" type="button" onclick="Q('trainingImages').click()">选择图片</button>
-      <div class="thumbs" id="trainingThumbs"></div>
+  </section>
+
+  <!-- 5 饮食 -->
+  <section class="card" id="card-meals">
+    <button class="card-head" type="button" onclick="toggleCard('card-meals')">
+      <span class="num">5</span>饮食
+      <span class="badge" data-badge></span><span class="arrow">▶</span>
+    </button>
+    <div class="card-body">
+      <div id="mealList"></div>
+      <button class="add" type="button" onclick="addMeal()">+ 加一餐</button>
     </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2><span class="dot"></span>饮食</h2>
-    <div id="mealList"></div>
-    <button class="add" type="button" onclick="addMeal()">+ 加一餐</button>
-  </div>
+  <!-- 6 其他 -->
+  <section class="card" id="card-notes">
+    <button class="card-head" type="button" onclick="toggleCard('card-notes')">
+      <span class="num">6</span>其他
+      <span class="badge" data-badge></span><span class="arrow">▶</span>
+    </button>
+    <div class="card-body">
+      <label for="notes">今天的整体状态 / 想说的话</label>
+      <textarea id="notes" placeholder="精神、情绪、饿感、任何想记的" oninput="onInput()"></textarea>
+    </div>
+  </section>
 
-  <div class="card">
-    <h2><span class="dot"></span>其他</h2>
-    <label for="notes">今天的整体状态 / 想说的话</label>
-    <textarea id="notes" placeholder="精神、情绪、饿感、任何想记的"></textarea>
+  <section id="recordCard" class="record-card" aria-live="polite"></section>
+  <div id="cardActions" class="card-actions">
+    <button class="btn ghost" type="button" onclick="copyRecord()">复制记录文字</button>
+    <button class="btn primary" type="button" onclick="downloadCard()">保存记录卡</button>
   </div>
-</div>
-
-<section id="recordCard" class="record-card" aria-live="polite"></section>
-<div id="cardActions" class="card-actions">
-  <button class="btn ghost" type="button" onclick="copyRecord()">复制记录文字</button>
-  <button class="btn primary" type="button" onclick="downloadCard()">保存记录卡</button>
 </div>
 
 <footer>
   <div class="bar">
-    <button class="btn ghost" type="button" onclick="resetForm()">清空</button>
+    <button class="btn icon" type="button" onclick="resetForm()" aria-label="清空全部">🗑️</button>
     <button class="btn primary" id="submitBtn" type="button" onclick="submitForm()">生成记录并复制</button>
   </div>
 </footer>
@@ -331,35 +451,44 @@ const PLANS = {
   B: ['坐姿划船', '二头弯举', '腹肌训练', '平板支撑'],
 };
 const uploads = { sleep: [], activity: [], training: [] };
+const LS_DRAFT = 'health-record-draft-v2';
+const LS_LAST_WORKOUT = 'health-last-workout-v1';
 
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 
+/* ── 手风琴 ── */
+function toggleCard(id){
+  const c = Q(id);
+  const opening = !c.classList.contains('open');
+  c.classList.toggle('open', opening);
+  if(opening) c.querySelector('.card-body').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function openCard(id){ Q(id).classList.add('open'); }
+
+/* ── 分段选择 ── */
 function initSeg(id, onPick){
-  const box = Q(id);
-  if(!box) return;
+  const box = Q(id); if(!box) return;
   box.addEventListener('click', e => {
     const btn = e.target.closest('button[data-v]');
     if(!btn) return;
+    const already = btn.classList.contains('on');
     [...box.querySelectorAll('button')].forEach(b => b.classList.remove('on'));
-    btn.classList.add('on');
-    if(onPick) onPick(btn.dataset.v);
+    if(!already) btn.classList.add('on');          // 再点一次可取消
+    if(onPick) onPick(already ? null : btn.dataset.v);
+    onInput();
   });
 }
-function segVal(id){
-  const on = Q(id)?.querySelector('button.on');
-  return on ? on.dataset.v : null;
-}
+function segVal(id){ const on = Q(id)?.querySelector('button.on'); return on ? on.dataset.v : null; }
 function setSeg(id, v){
-  const box = Q(id); if(!box) return;
-  [...box.querySelectorAll('button')].forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  [...Q(id).querySelectorAll('button')].forEach(b => b.classList.toggle('on', b.dataset.v === v));
 }
 
+/* ── 图片 ── */
 function renderThumbs(kind){
-  const box = Q(kind + 'Thumbs');
-  box.innerHTML = '';
+  const box = Q(kind + 'Thumbs'); box.innerHTML = '';
   uploads[kind].forEach((item, idx) => {
     const div = document.createElement('div');
     div.className = 'thumb';
@@ -374,26 +503,28 @@ function renderThumbs(kind){
 }
 function bindUploader(inputId, kind){
   Q(inputId).addEventListener('change', e => {
-    const files = [...e.target.files];
-    files.forEach(file => {
+    [...e.target.files].forEach(file => {
       if(!file.type.startsWith('image/')) return;
       uploads[kind].push({ file, url: URL.createObjectURL(file) });
     });
     e.target.value = '';
     renderThumbs(kind);
+    if(uploads[kind].length) toast('图片已加（仅本地预览），最终请微信原图发给小克');
   });
 }
 
+/* ── 训练矩阵 ── */
 function addMatrixRow(name=''){
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td class="name-cell"><input class="m-name" type="text" value="${name}" placeholder="动作名"></td>
-    <td><input class="m-g" data-g="1" type="text" placeholder="20×12"></td>
-    <td><input class="m-g" data-g="2" type="text" placeholder="20×12"></td>
-    <td><input class="m-g" data-g="3" type="text" placeholder="20×12"></td>
-    <td><input class="m-g" data-g="4" type="text" placeholder="可选"></td>
+    <td class="name-cell"><input class="m-name" type="text" value="${name.replace(/"/g,'&quot;')}" placeholder="动作名"></td>
+    <td><input class="m-g" type="text" placeholder="20×12"></td>
+    <td><input class="m-g" type="text" placeholder="20×12"></td>
+    <td><input class="m-g" type="text" placeholder="20×12"></td>
+    <td><input class="m-g" type="text" placeholder="可选"></td>
     <td class="ops"><button type="button" aria-label="删除动作">删</button></td>`;
-  tr.querySelector('.ops button').onclick = () => tr.remove();
+  tr.querySelector('.ops button').onclick = () => { tr.remove(); onInput(); };
+  tr.querySelectorAll('input').forEach(i => i.addEventListener('input', onInput));
   Q('matrixBody').appendChild(tr);
 }
 function loadPlan(plan){
@@ -402,8 +533,7 @@ function loadPlan(plan){
   (PLANS[plan] || []).forEach(name => addMatrixRow(name));
 }
 function parseGroup(text){
-  const raw = (text || '').trim();
-  if(!raw) return null;
+  const raw = (text || '').trim(); if(!raw) return null;
   let m = raw.match(/^(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+)$/i);
   if(m) return { weight_kg: Number(m[1]), reps: Number(m[2]), raw };
   m = raw.match(/^(\d+(?:\.\d+)?)\s*(s|秒)$/i);
@@ -415,46 +545,58 @@ function parseGroup(text){
 function collectMatrix(){
   const rows = [];
   Q('matrixBody').querySelectorAll('tr').forEach(tr => {
-    const name = tr.querySelector('.m-name').value.trim();
-    if(!name) return;
-    const groups = [...tr.querySelectorAll('.m-g')]
-      .map(inp => parseGroup(inp.value))
-      .filter(Boolean);
+    const name = tr.querySelector('.m-name').value.trim(); if(!name) return;
+    const groups = [...tr.querySelectorAll('.m-g')].map(i => parseGroup(i.value)).filter(Boolean);
     rows.push({ name, groups });
   });
   return rows;
 }
+function loadLastWorkout(){
+  try{
+    const last = JSON.parse(localStorage.getItem(LS_LAST_WORKOUT) || 'null');
+    if(!last?.length){ toast('还没存过训练记录，先完整提交一次就有了'); return; }
+    Q('matrixBody').innerHTML = '';
+    last.forEach(r => {
+      addMatrixRow(r.name);
+      const tr = Q('matrixBody').lastElementChild;
+      (r.groups || []).forEach((g, i) => {
+        const inp = tr.querySelectorAll('.m-g')[i];
+        if(inp && g.raw) inp.value = g.raw;
+      });
+    });
+    setSeg('exType','gym'); Q('gymBox').style.display='block';
+    openCard('card-exercise');
+    toast(`已套用上次训练（${last.length} 个动作），重量按今天状态调`);
+  }catch(e){ toast('读取上次训练失败'); }
+}
 
+/* ── 饮食 ── */
 function addMeal(time='', type=''){
   const div = document.createElement('div');
   div.className = 'meal-item';
   const now = new Date();
   const cur = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   div.innerHTML = `
-    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
-      <strong style="font-size:13px;color:var(--muted)">一餐</strong>
-      <button class="ghost" type="button" style="padding:6px 10px">删除</button>
+    <div class="meal-head">
+      <strong>一餐</strong>
+      <button class="del" type="button">删除</button>
     </div>
     <div class="row">
-      <div class="field" style="flex:0 1 110px">
+      <div class="field" style="flex:0 1 120px">
         <label>时间</label>
         <input class="m-time" type="time" value="${time || cur}">
       </div>
       <div class="field">
         <label>餐次</label>
         <select class="m-type">
-          <option value="早餐">早餐</option>
-          <option value="午餐">午餐</option>
-          <option value="晚餐">晚餐</option>
-          <option value="加餐">加餐</option>
+          <option value="早餐">早餐</option><option value="午餐">午餐</option>
+          <option value="晚餐">晚餐</option><option value="加餐">加餐</option>
         </select>
       </div>
     </div>
-    <div style="margin-top:10px">
-      <label>吃了什么</label>
-      <textarea class="m-content" placeholder="如 米饭半碗、清蒸鲈鱼、炒青菜"></textarea>
-    </div>
-    <div class="row" style="margin-top:10px">
+    <label>吃了什么</label>
+    <textarea class="m-content" style="min-height:56px" placeholder="如 米饭半碗、清蒸鲈鱼、炒青菜"></textarea>
+    <div class="row" style="margin-top:8px">
       <div class="field">
         <label>蛋白份数</label>
         <select class="m-protein"><option value="">未填</option><option>0</option><option>1</option><option>2</option><option>3</option></select>
@@ -468,11 +610,13 @@ function addMeal(time='', type=''){
         <select class="m-oily"><option value="">未填</option><option>低</option><option>中</option><option>高</option></select>
       </div>
     </div>`;
-  div.querySelector('button').onclick = () => div.remove();
+  div.querySelector('.del').onclick = () => { div.remove(); onInput(); };
+  div.querySelectorAll('input,select,textarea').forEach(i => i.addEventListener('input', onInput));
   if(type) div.querySelector('.m-type').value = type;
   Q('mealList').appendChild(div);
 }
 
+/* ── 收集 ── */
 function collect(){
   const payload = { date: Q('date').value.trim() || today() };
   const wRaw = Q('weight').value.trim();
@@ -498,12 +642,10 @@ function collect(){
 
   const ex = {};
   const t = segVal('exType');
-  if(t && t !== 'none'){
-    ex.gym = t === 'gym';
-    ex.swim = t === 'swim';
+  if(t === 'none'){ ex.gym = false; ex.swim = false; }
+  else if(t){
+    ex.gym = t === 'gym'; ex.swim = t === 'swim';
     if(t === 'cardio') ex.other = '有氧';
-  } else if(t === 'none'){
-    ex.gym = false; ex.swim = false;
   }
   if(Q('exDur').value) ex.duration_min = Number(Q('exDur').value);
   if(Q('exRpe').value) ex.rpe = Number(Q('exRpe').value);
@@ -516,14 +658,8 @@ function collect(){
   const meals = [];
   Q('mealList').querySelectorAll('.meal-item').forEach(it => {
     const content = it.querySelector('.m-content').value.trim();
-    const m = {
-      time: it.querySelector('.m-time').value,
-      type: it.querySelector('.m-type').value,
-      content
-    };
-    const p = it.querySelector('.m-protein').value;
-    const v = it.querySelector('.m-veggies').value;
-    const o = it.querySelector('.m-oily').value;
+    const m = { time: it.querySelector('.m-time').value, type: it.querySelector('.m-type').value, content };
+    const p = it.querySelector('.m-protein').value, v = it.querySelector('.m-veggies').value, o = it.querySelector('.m-oily').value;
     if(p) m.protein_servings = Number(p);
     if(v) m.veggies_fist = Number(v);
     if(o) m.oily_salty = o;
@@ -534,18 +670,69 @@ function collect(){
   return payload;
 }
 
-function toast(msg, ms=2800){
-  const t = Q('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('show'), ms);
+/* ── 进度 + 待补提醒 + 徽标 ── */
+const PROGRESS_FIELDS = ['weight','waist','bedtime','waketime','bikeAM','bikePM','exDur','exRpe','exNote','notes'];
+function onInput(){
+  let filled = 0, total = 0;
+  PROGRESS_FIELDS.forEach(id => { total++; if(Q(id)?.value?.trim()) filled++; });
+  ['sleepQuality','commuteMode','exType','exFeel'].forEach(id => { total++; if(segVal(id)) filled++; });
+  total++; if([...Q('mealList').querySelectorAll('.m-content')].some(t=>t.value.trim())) filled++;
+  const pct = Math.round(filled / total * 100);
+  Q('progFill').style.width = pct + '%';
+  Q('progText').textContent = pct + '% 已填';
+
+  const badges = {
+    'card-body': (Q('weight').value.trim() || Q('waist').value.trim()) ? '已填' : '',
+    'card-sleep': (Q('bedtime').value || Q('waketime').value || segVal('sleepQuality')) ? '已填' : '',
+    'card-commute': (Q('bikeAM').value || Q('bikePM').value || segVal('commuteMode')) ? '已填' : '',
+    'card-exercise': (segVal('exType') || collectMatrix().length) ? '已填' : '',
+    'card-meals': [...Q('mealList').querySelectorAll('.m-content')].some(t=>t.value.trim()) ? '已填' : '',
+    'card-notes': Q('notes').value.trim() ? '已填' : '',
+  };
+  Object.entries(badges).forEach(([cid, txt]) => {
+    const b = Q(cid).querySelector('.badge');
+    b.textContent = txt; b.classList.toggle('done', !!txt);
+  });
+
+  const todos = [];
+  if(!Q('bedtime').value && !Q('waketime').value) todos.push('睡眠时间');
+  if(!segVal('commuteMode')) todos.push('通勤方式');
+  if(![...Q('mealList').querySelectorAll('.m-content')].some(t=>t.value.trim())) todos.push('饮食');
+  const bar = Q('todoBar');
+  if(todos.length && pct < 100){
+    Q('todoText').textContent = `还差：${todos.join('、')}（图片可微信原图发，网页里可跳过）`;
+    bar.classList.add('show');
+  } else bar.classList.remove('show');
+
+  saveDraft();
 }
 
+/* ── 快捷默认日 ── */
+function quickDefault(){
+  setSeg('commuteMode','骑行');
+  if(!Q('bikeAM').value) Q('bikeAM').value = 12;
+  if(!Q('bikePM').value) Q('bikePM').value = 12;
+  Q('mealList').innerHTML = '';
+  addMeal('08:00','早餐'); addMeal('12:00','午餐'); addMeal('19:00','晚餐');
+  setSeg('exType','none');
+  toast('默认日已填：通勤骑行+三餐占位，改完实际数据再提交');
+  onInput();
+}
+
+/* ── toast ── */
+function toast(msg, ms=3000){
+  if(!msg) return;
+  const t = Q('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ── 记录卡 ── */
 function escapeHtml(s){ return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 function formatRecord(payload){
   const lines = [`【健康记录｜${payload.date}】`];
   if(payload.weight_kg?.length) lines.push(`体重：${payload.weight_kg.map(x => (x*2).toFixed(1).replace(/\.0$/,'')+'斤').join(' / ')}`);
+  if(payload.waist_cm) lines.push(`腰围：${payload.waist_cm}cm`);
   const s = payload.sleep || {};
   if(Object.keys(s).length) lines.push(`睡眠：${[s.bedtime && s.waketime ? s.bedtime+'–'+s.waketime : '',s.quality,s.note].filter(Boolean).join('｜')}`);
   const c = payload.commute || {};
@@ -564,22 +751,73 @@ function formatRecord(payload){
 function renderRecordCard(payload, text){
   const card=Q('recordCard'); const s=payload.sleep||{}, c=payload.commute||{}, ex=payload.exercise||{};
   const type=ex.gym?'健身':ex.swim?'游泳':ex.other||(ex.gym===false&&ex.swim===false?'未训练':'未记录');
-  const items=[['体重',payload.weight_kg?.length?payload.weight_kg.map(x=>(x*2).toFixed(1).replace(/\.0$/,'')+'斤').join(' / '):'未记录'],['睡眠',s.bedtime&&s.waketime?s.bedtime+'–'+s.waketime:(s.quality||'未记录')],['通勤',c.mode_note||'未记录'],['训练',[type,ex.duration_min&&ex.duration_min+'分钟'].filter(Boolean).join('｜')]];
+  const items=[['体重',payload.weight_kg?.length?payload.weight_kg.map(x=>(x*2).toFixed(1).replace(/\.0$/,'')+'斤').join(' / '):'未记录'],['睡眠',s.bedtime&&s.waketime?s.bedtime+'–'+s.waketime:(s.quality||'未记录')],['通勤',c.mode_note||'未记录'],['训练',[type,ex.duration_min&&ex.duration_min+'分钟'].filter(Boolean).join('｜')||'未记录']];
   const meals=(payload.meals||[]).map(m=>`<div>· ${escapeHtml(m.type)}：${escapeHtml(m.content||'未填写')}</div>`).join('') || '<span class="card-empty">未记录</span>';
   const train=(ex.detail||[]).map(r=>`<div>· ${escapeHtml(r.name)}${r.groups?.length?'：'+escapeHtml(r.groups.map(g=>g.raw).filter(Boolean).join(' / ')):''}</div>`).join('') || '<span class="card-empty">未记录</span>';
-  card.innerHTML=`<div class="card-head"><div><h3>今日健康记录</h3><div class="card-date">${escapeHtml(payload.date)} · 小克健康台账</div></div><div>✦</div></div><div class="card-grid">${items.map(([k,v])=>`<div class="card-item"><b>${k}</b>${escapeHtml(v)}</div>`).join('')}</div><div class="card-block"><b>训练明细</b>${train}</div><div class="card-block"><b>饮食</b>${meals}</div>${payload.notes?.[0]?`<div class="card-block"><b>备注</b><div>${escapeHtml(payload.notes[0])}</div></div>`:''}`;
-  card.dataset.text=text; card.classList.add('show'); Q('cardActions').classList.add('show'); card.scrollIntoView({behavior:'smooth',block:'start'});
+  card.innerHTML=`<div class="card-head"><div><h3>今日健康记录</h3><div class="card-date">${escapeHtml(payload.date)} · 小克健康台账</div></div><div class="spark">✦</div></div><div class="card-grid">${items.map(([k,v])=>`<div class="card-item"><b>${k}</b>${escapeHtml(v)}</div>`).join('')}</div><div class="card-block"><b>训练明细</b>${train}</div><div class="card-block"><b>饮食</b>${meals}</div>${payload.notes?.[0]?`<div class="card-block"><b>备注</b><div>${escapeHtml(payload.notes[0])}</div></div>`:''}`;
+  card.dataset.text=text; card.classList.add('show'); Q('cardActions').classList.add('show');
+  card.scrollIntoView({behavior:'smooth',block:'start'});
 }
-async function copyRecord(){ const text=Q('recordCard').dataset.text||''; try{ await navigator.clipboard.writeText(text); toast('记录文字已复制，打开微信直接粘贴'); }catch(e){ toast('复制失败，请长按选择记录卡内容'); } }
-function downloadCard(){ const text=Q('recordCard').dataset.text||''; const blob=new Blob([text],{type:'text/plain;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`健康记录-${Q('date').value||today()}.txt`; a.click(); URL.revokeObjectURL(a.href); toast('记录文本已保存'); }
-function saveDraft(){ try{ localStorage.setItem('health-record-draft-v1',JSON.stringify(collect())); }catch(e){} }
-function restoreDraft(){ try{ const p=JSON.parse(localStorage.getItem('health-record-draft-v1')||'null'); if(p?.date) Q('date').value=p.date; }catch(e){} }
+async function copyRecord(){ const text=Q('recordCard').dataset.text||''; try{ await navigator.clipboard.writeText(text); toast('已复制，去微信粘贴给小克'); }catch(e){ toast('复制失败，请长按记录卡文字选择复制'); } }
+function downloadCard(){ const text=Q('recordCard').dataset.text||''; const blob=new Blob([text],{type:'text/plain;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`健康记录-${Q('date').value||today()}.txt`; a.click(); URL.revokeObjectURL(a.href); toast('已保存 txt'); }
+
+/* ── 草稿 ── */
+function snapshotState(){
+  const meals = [...Q('mealList').querySelectorAll('.meal-item')].map(it => ({
+    time: it.querySelector('.m-time').value, type: it.querySelector('.m-type').value,
+    content: it.querySelector('.m-content').value,
+    p: it.querySelector('.m-protein').value, v: it.querySelector('.m-veggies').value, o: it.querySelector('.m-oily').value,
+  }));
+  const matrix = [...Q('matrixBody').querySelectorAll('tr')].map(tr => ({
+    name: tr.querySelector('.m-name').value,
+    g: [...tr.querySelectorAll('.m-g')].map(i => i.value),
+  }));
+  return {
+    date: Q('date').value, weight: Q('weight').value, waist: Q('waist').value,
+    bedtime: Q('bedtime').value, waketime: Q('waketime').value, sleepNote: Q('sleepNote').value,
+    bikeAM: Q('bikeAM').value, bikePM: Q('bikePM').value,
+    exDur: Q('exDur').value, exRpe: Q('exRpe').value, exNote: Q('exNote').value, notes: Q('notes').value,
+    segs: { sleepQuality: segVal('sleepQuality'), commuteMode: segVal('commuteMode'), exType: segVal('exType'), exFeel: segVal('exFeel') },
+    meals, matrix,
+  };
+}
+function saveDraft(){ try{ localStorage.setItem(LS_DRAFT, JSON.stringify(snapshotState())); }catch(e){} }
+function restoreDraft(){
+  try{
+    const d = JSON.parse(localStorage.getItem(LS_DRAFT) || 'null');
+    if(!d) return false;
+    ['date','weight','waist','bedtime','waketime','sleepNote','bikeAM','bikePM','exDur','exRpe','exNote','notes']
+      .forEach(k => { if(d[k] != null) Q(k).value = d[k]; });
+    Object.entries(d.segs || {}).forEach(([id, v]) => v && setSeg(id, v));
+    (d.matrix || []).forEach(r => {
+      addMatrixRow(r.name || '');
+      const tr = Q('matrixBody').lastElementChild;
+      (r.g || []).forEach((v, i) => { const inp = tr.querySelectorAll('.m-g')[i]; if(inp) inp.value = v; });
+    });
+    (d.meals || []).forEach(m => {
+      addMeal(m.time, m.type);
+      const it = Q('mealList').lastElementChild;
+      it.querySelector('.m-content').value = m.content || '';
+      if(m.p) it.querySelector('.m-protein').value = m.p;
+      if(m.v) it.querySelector('.m-veggies').value = m.v;
+      if(m.o) it.querySelector('.m-oily').value = m.o;
+    });
+    if(d.segs?.exType === 'gym' || d.segs?.exType === 'cardio') Q('gymBox').style.display = 'block';
+    return true;
+  }catch(e){ return false; }
+}
+
+/* ── 提交 ── */
 async function submitForm(){
   const payload = collect();
+  if(payload.exercise?.detail?.length){
+    try{ localStorage.setItem(LS_LAST_WORKOUT, JSON.stringify(payload.exercise.detail)); }catch(e){}
+  }
   saveDraft();
-  const text=formatRecord(payload);
-  renderRecordCard(payload,text);
-  try{ await navigator.clipboard.writeText(text); toast('记录已生成并复制：去微信粘贴给小克'); }catch(e){ toast('记录已生成：点“复制记录文字”后发微信'); }
+  const text = formatRecord(payload);
+  renderRecordCard(payload, text);
+  try{ await navigator.clipboard.writeText(text); toast('记录已生成并复制 → 打开微信粘贴给小克，图片记得原图发'); }
+  catch(e){ toast('记录已生成：点下方「复制记录文字」后发微信'); }
 }
 
 function setToday(){ Q('date').value = today(); }
@@ -587,23 +825,21 @@ function resetForm(){
   if(!confirm('确定清空所有已填内容？')) return;
   ['weight','waist','bedtime','waketime','sleepNote','bikeAM','bikePM','exDur','exRpe','exNote','notes']
     .forEach(id => Q(id).value = '');
-  ['sleepQuality','commuteMode','exType','exFeel'].forEach(id => {
-    Q(id).querySelectorAll('button').forEach(b => b.classList.remove('on'));
-  });
-  Object.keys(uploads).forEach(k => {
-    uploads[k].forEach(x => URL.revokeObjectURL(x.url));
-    uploads[k] = [];
-    renderThumbs(k);
-  });
+  ['sleepQuality','commuteMode','exType','exFeel'].forEach(id =>
+    Q(id).querySelectorAll('button').forEach(b => b.classList.remove('on')));
+  Object.keys(uploads).forEach(k => { uploads[k].forEach(x => URL.revokeObjectURL(x.url)); uploads[k] = []; renderThumbs(k); });
   Q('matrixBody').innerHTML = '';
   Q('mealList').innerHTML = '';
   Q('gymBox').style.display = 'none';
-  setToday();
-  addMeal('08:00','早餐');
-  addMeal('12:00','午餐');
-  addMeal('19:00','晚餐');
+  try{ localStorage.removeItem(LS_DRAFT); }catch(e){}
+  setToday(); addMeal('08:00','早餐'); addMeal('12:00','午餐'); addMeal('19:00','晚餐');
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('open'));
+  Q('card-body').classList.add('open');
+  onInput();
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 
+/* ── 初始化 ── */
 initSeg('sleepQuality');
 initSeg('commuteMode');
 initSeg('exFeel');
@@ -612,19 +848,20 @@ initSeg('exType', v => {
   if((v === 'gym' || v === 'cardio') && !Q('matrixBody').children.length) addMatrixRow();
 });
 Q('planChips').addEventListener('click', e => {
-  const btn = e.target.closest('button[data-plan]');
-  if(!btn) return;
-  loadPlan(btn.dataset.plan);
+  const btn = e.target.closest('button[data-plan]'); if(!btn) return;
+  loadPlan(btn.dataset.plan); onInput();
 });
-bindUploader('sleepImages', 'sleep');
-bindUploader('activityImages', 'activity');
-bindUploader('trainingImages', 'training');
+bindUploader('sleepImages','sleep');
+bindUploader('activityImages','activity');
+bindUploader('trainingImages','training');
+document.addEventListener('change', e => { if(e.target.matches('select')) onInput(); });
 
-setToday();
-restoreDraft();
-addMeal('08:00','早餐');
-addMeal('12:00','午餐');
-addMeal('19:00','晚餐');
+const hadDraft = restoreDraft();
+if(!hadDraft){
+  setToday();
+  addMeal('08:00','早餐'); addMeal('12:00','午餐'); addMeal('19:00','晚餐');
+}
+onInput();
 </script>
 </body>
 </html>
