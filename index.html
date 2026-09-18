@@ -450,7 +450,7 @@ const PLANS = {
   A: ['坐姿推胸', '高位下拉', '腹肌训练', '平板支撑'],
   B: ['坐姿划船', '二头弯举', '腹肌训练', '平板支撑'],
 };
-const uploads = { sleep: [], activity: [], training: [] };
+const uploads = { sleep: [], activity: [], training: [], meal_breakfast: [], meal_lunch: [], meal_dinner: [] };
 const LS_DRAFT = 'health-record-draft-v2';
 const LS_LAST_WORKOUT = 'health-last-workout-v1';
 
@@ -570,49 +570,39 @@ function loadLastWorkout(){
   }catch(e){ toast('读取上次训练失败'); }
 }
 
-/* ── 饮食 ── */
-function addMeal(time='', type=''){
+/* ── 饮食：固定三餐 ── */
+function addMeal(key, time){
+  const label = {'breakfast':'早餐','lunch':'午餐','dinner':'晚餐'}[key];
   const div = document.createElement('div');
   div.className = 'meal-item';
-  const now = new Date();
-  const cur = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  div.dataset.meal = key;
   div.innerHTML = `
     <div class="meal-head">
-      <strong>一餐</strong>
-      <button class="del" type="button">删除</button>
+      <strong>${label}</strong>
     </div>
     <div class="row">
       <div class="field" style="flex:0 1 120px">
         <label>时间</label>
-        <input class="m-time" type="time" value="${time || cur}">
+        <input class="m-time" type="time" value="${time}">
       </div>
       <div class="field">
-        <label>餐次</label>
-        <select class="m-type">
-          <option value="早餐">早餐</option><option value="午餐">午餐</option>
-          <option value="晚餐">晚餐</option><option value="加餐">加餐</option>
+        <label>油盐感觉（可选）</label>
+        <select class="m-oily">
+          <option value="">不确定/不填</option>
+          <option>清淡</option><option>正常</option><option>偏咸偏油</option>
         </select>
       </div>
     </div>
     <label>吃了什么</label>
-    <textarea class="m-content" style="min-height:56px" placeholder="如 米饭半碗、清蒸鲈鱼、炒青菜"></textarea>
-    <div class="row" style="margin-top:8px">
-      <div class="field">
-        <label>蛋白份数</label>
-        <select class="m-protein"><option value="">未填</option><option>0</option><option>1</option><option>2</option><option>3</option></select>
-      </div>
-      <div class="field">
-        <label>蔬菜拳头数</label>
-        <select class="m-veggies"><option value="">未填</option><option>0</option><option>1</option><option>2</option><option>3</option></select>
-      </div>
-      <div class="field">
-        <label>油盐</label>
-        <select class="m-oily"><option value="">未填</option><option>低</option><option>中</option><option>高</option></select>
-      </div>
+    <textarea class="m-content" style="min-height:56px" placeholder="如 米饭半碗、清蒸鲈鱼、炒青菜；蛋白和蔬菜小克看内容+图估算"></textarea>
+    <div class="upload">
+      <div class="title">📷 ${label}照片（可选）</div>
+      <input class="visually-hidden" id="meal-${key}-images" type="file" accept="image/*" multiple>
+      <button class="ghost" type="button" onclick="Q('meal-${key}-images').click()">选择图片</button>
+      <div class="thumbs" id="meal-${key}-thumbs"></div>
+      <div class="hint">拍下这餐即可，小克结合文字+照片估蛋白/蔬菜量</div>
     </div>`;
-  div.querySelector('.del').onclick = () => { div.remove(); onInput(); };
   div.querySelectorAll('input,select,textarea').forEach(i => i.addEventListener('input', onInput));
-  if(type) div.querySelector('.m-type').value = type;
   Q('mealList').appendChild(div);
 }
 
@@ -658,12 +648,12 @@ function collect(){
   const meals = [];
   Q('mealList').querySelectorAll('.meal-item').forEach(it => {
     const content = it.querySelector('.m-content').value.trim();
-    const m = { time: it.querySelector('.m-time').value, type: it.querySelector('.m-type').value, content };
-    const p = it.querySelector('.m-protein').value, v = it.querySelector('.m-veggies').value, o = it.querySelector('.m-oily').value;
-    if(p) m.protein_servings = Number(p);
-    if(v) m.veggies_fist = Number(v);
+    if(!content) return;   // 没写内容就不算这餐
+    const m = { type: {'breakfast':'早餐','lunch':'午餐','dinner':'晚餐'}[it.dataset.meal],
+                time: it.querySelector('.m-time').value, content };
+    const o = it.querySelector('.m-oily').value;
     if(o) m.oily_salty = o;
-    if(content || p || v || o) meals.push(m);
+    meals.push(m);
   });
   if(meals.length) payload.meals = meals;
   if(Q('notes').value.trim()) payload.notes = [Q('notes').value.trim()];
@@ -713,7 +703,7 @@ function quickDefault(){
   if(!Q('bikeAM').value) Q('bikeAM').value = 12;
   if(!Q('bikePM').value) Q('bikePM').value = 12;
   Q('mealList').innerHTML = '';
-  addMeal('08:00','早餐'); addMeal('12:00','午餐'); addMeal('19:00','晚餐');
+  addMeal('breakfast','08:00'); addMeal('lunch','12:00'); addMeal('dinner','19:00');
   setSeg('exType','none');
   toast('默认日已填：通勤骑行+三餐占位，改完实际数据再提交');
   onInput();
@@ -764,9 +754,10 @@ function downloadCard(){ const text=Q('recordCard').dataset.text||''; const blob
 /* ── 草稿 ── */
 function snapshotState(){
   const meals = [...Q('mealList').querySelectorAll('.meal-item')].map(it => ({
-    time: it.querySelector('.m-time').value, type: it.querySelector('.m-type').value,
+    key: it.dataset.meal,
+    time: it.querySelector('.m-time').value,
     content: it.querySelector('.m-content').value,
-    p: it.querySelector('.m-protein').value, v: it.querySelector('.m-veggies').value, o: it.querySelector('.m-oily').value,
+    o: it.querySelector('.m-oily').value,
   }));
   const matrix = [...Q('matrixBody').querySelectorAll('tr')].map(tr => ({
     name: tr.querySelector('.m-name').value,
@@ -795,11 +786,10 @@ function restoreDraft(){
       (r.g || []).forEach((v, i) => { const inp = tr.querySelectorAll('.m-g')[i]; if(inp) inp.value = v; });
     });
     (d.meals || []).forEach(m => {
-      addMeal(m.time, m.type);
-      const it = Q('mealList').lastElementChild;
+      const it = Q('mealList').querySelector(`[data-meal="${m.key}"]`);
+      if(!it) return;
+      if(m.time) it.querySelector('.m-time').value = m.time;
       it.querySelector('.m-content').value = m.content || '';
-      if(m.p) it.querySelector('.m-protein').value = m.p;
-      if(m.v) it.querySelector('.m-veggies').value = m.v;
       if(m.o) it.querySelector('.m-oily').value = m.o;
     });
     if(d.segs?.exType === 'gym' || d.segs?.exType === 'cardio') Q('gymBox').style.display = 'block';
@@ -832,7 +822,7 @@ function resetForm(){
   Q('mealList').innerHTML = '';
   Q('gymBox').style.display = 'none';
   try{ localStorage.removeItem(LS_DRAFT); }catch(e){}
-  setToday(); addMeal('08:00','早餐'); addMeal('12:00','午餐'); addMeal('19:00','晚餐');
+  setToday(); addMeal('breakfast','08:00'); addMeal('lunch','12:00'); addMeal('dinner','19:00');
   document.querySelectorAll('.card').forEach(c => c.classList.remove('open'));
   Q('card-body').classList.add('open');
   onInput();
@@ -854,12 +844,15 @@ Q('planChips').addEventListener('click', e => {
 bindUploader('sleepImages','sleep');
 bindUploader('activityImages','activity');
 bindUploader('trainingImages','training');
+bindUploader('meal-breakfast-images','meal_breakfast');
+bindUploader('meal-lunch-images','meal_lunch');
+bindUploader('meal-dinner-images','meal_dinner');
 document.addEventListener('change', e => { if(e.target.matches('select')) onInput(); });
 
 const hadDraft = restoreDraft();
 if(!hadDraft){
   setToday();
-  addMeal('08:00','早餐'); addMeal('12:00','午餐'); addMeal('19:00','晚餐');
+  addMeal('breakfast','08:00'); addMeal('lunch','12:00'); addMeal('dinner','19:00');
 }
 onInput();
 </script>
